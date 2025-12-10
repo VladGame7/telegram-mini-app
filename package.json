@@ -1,28 +1,11 @@
 {
   "name": "telegram-mini-app",
-  "version": "0.1.0",
-  "private": true,
+  "version": "1.0.0",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "start": "node server.js"
   },
   "dependencies": {
-    "@telegram-apps/sdk": "^3.11.8",
-    "@telegram-apps/sdk-react": "^3.3.9",
-    "next": "16.0.7",
-    "react": "19.2.0",
-    "react-dom": "19.2.0"
-  },
-  "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.0.7",
-    "tailwindcss": "^4",
-    "typescript": "^5"
+    "express": "^4.19.2",
+    "cors": "^2.8.5"
   }
 }

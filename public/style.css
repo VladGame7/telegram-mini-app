@@ -1,0 +1,95 @@
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+  background: #f5f5f7;
+  color: #000;
+}
+
+.container {
+  max-width: 500px;
+  margin: 20px auto;
+  padding: 16px;
+}
+
+h1 {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 20px;
+}
+
+.input-group {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+input {
+  flex: 1;
+  padding: 12px 16px;
+  border: 1px solid #d2d2d7;
+  border-radius: 12px;
+  font-size: 17px;
+  outline: none;
+}
+
+button {
+  padding: 12px 20px;
+  background: #007aff;
+  color: white;
+  border: none;
+  border-radius: 12px;
+  font-size: 17px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.task {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  background: white;
+  border-radius: 12px;
+  margin-bottom: 10px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.checkbox {
+  width: 24px;
+  height: 24px;
+  border: 2px solid #007aff;
+  border-radius: 6px;
+  margin-right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+}
+
+.checkbox.checked {
+  background: #007aff;
+}
+
+.checkbox.checked::after {
+  content: "✓";
+  color: white;
+  font-size: 16px;
+}
+
+.task-text {
+  flex: 1;
+  font-size: 17px;
+}
+
+.task.completed .task-text {
+  text-decoration: line-through;
+  color: #8e8e93;
+}
+
+.delete-btn {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: #ff3b30;
+  cursor: pointer;
+  padding: 4px;
+}
