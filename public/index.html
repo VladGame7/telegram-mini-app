@@ -28,7 +28,10 @@
         <button type="button" class="priority-btn high" data-value="high" title="Высокий">🔴</button>
       </div>
       
-      <input type="datetime-local" id="deadline" placeholder="Дедлайн">
+      <div class="form-row">
+        <input type="date" id="deadlineDate" placeholder="Дата">
+        <input type="time" id="deadlineTime" placeholder="Время">
+      </div>
 
       <div class="form-actions">
         <button class="btn-cancel" onclick="hideAddForm()">Отмена</button>

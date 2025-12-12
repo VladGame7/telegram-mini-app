@@ -36,11 +36,21 @@ async function addTask() {
   const text = document.getElementById('taskInput').value.trim();
   const priorityBtn = document.querySelector('.priority-btn.active');
   const priority = priorityBtn ? priorityBtn.dataset.value : 'medium';
-  const deadlineRaw = document.getElementById('deadline').value;
+
+  // Получаем дату и время отдельно
+  const dateStr = document.getElementById('deadlineDate').value;
+  const timeStr = document.getElementById('deadlineTime').value;
+
+  let deadline = null;
+  if (dateStr && timeStr) {
+    const dateTimeStr = `${dateStr}T${timeStr}`;
+    const date = new Date(dateTimeStr);
+    if (!isNaN(date.getTime())) {
+      deadline = date.getTime();
+    }
+  }
 
   if (!text) return;
-
-  const deadline = deadlineRaw ? new Date(deadlineRaw).getTime() : null;
 
   try {
     const res = await fetch('/api/tasks', {
@@ -50,13 +60,13 @@ async function addTask() {
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     await res.json();
-    
-    // Сброс формы
+
     hideAddForm();
     document.getElementById('taskInput').value = '';
-    document.getElementById('deadline').value = '';
+    document.getElementById('deadlineDate').value = '';
+    document.getElementById('deadlineTime').value = '';
     document.querySelector('.priority-btn.medium').click();
-    
+
     fetchTasks();
   } catch (e) {
     alert('Не удалось добавить задачу. Попробуйте позже.');
