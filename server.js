@@ -16,40 +16,104 @@ app.get('/api/tasks', (req, res) => {
 
 // POST /api/tasks
 app.post('/api/tasks', (req, res) => {
-  const { text, priority = 'medium', deadline = null, completed = false } = req.body;
-  if (!text) return res.status(400).json({ error: 'text required' });
+  const { text, priority = 'medium', deadline = null } = req.body;
+  if (!text || typeof text !== 'string') {
+    return res.status(400).json({ error: 'text is required and must be a string' });
+  }
+
+  // Валидация priority
+  const validPriorities = ['low', 'medium', 'high'];
+  if (!validPriorities.includes(priority)) {
+    return res.status(400).json({ error: 'priority must be one of: low, medium, high' });
+  }
+
+  // Валидация deadline (опционально — число или null)
+  let parsedDeadline = null;
+  if (deadline != null) {
+    const num = Number(deadline);
+    if (isNaN(num) || num <= 0) {
+      return res.status(400).json({ error: 'deadline must be a valid timestamp or null' });
+    }
+    parsedDeadline = num;
+  }
 
   const task = {
     id: idCounter++,
-    text,
+    text: text.trim(),
     priority,
-    deadline,
-    completed,
+    deadline: parsedDeadline,
+    completed: false,
     createdAt: Date.now()
   };
+
   tasks.push(task);
   res.status(201).json(task);
 });
 
 // PATCH /api/tasks/:id
 app.patch('/api/tasks/:id', (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) {
+    return res.status(400).json({ error: 'id must be a number' });
+  }
+
   const task = tasks.find(t => t.id === id);
-  if (!task) return res.status(404).json({ error: 'Task not found' });
+  if (!task) {
+    return res.status(404).json({ error: 'Task not found' });
+  }
 
   const { completed, text, priority, deadline } = req.body;
-  if (completed !== undefined) task.completed = completed;
-  if (text !== undefined) task.text = text;
-  if (priority) task.priority = priority;
-  if (deadline !== undefined) task.deadline = deadline;
+
+  if (completed !== undefined) {
+    if (typeof completed !== 'boolean') {
+      return res.status(400).json({ error: 'completed must be a boolean' });
+    }
+    task.completed = completed;
+  }
+
+  if (text !== undefined) {
+    if (typeof text !== 'string') {
+      return res.status(400).json({ error: 'text must be a string' });
+    }
+    task.text = text.trim();
+  }
+
+  if (priority !== undefined) {
+    const validPriorities = ['low', 'medium', 'high'];
+    if (!validPriorities.includes(priority)) {
+      return res.status(400).json({ error: 'priority must be one of: low, medium, high' });
+    }
+    task.priority = priority;
+  }
+
+  if (deadline !== undefined) {
+    if (deadline === null) {
+      task.deadline = null;
+    } else {
+      const num = Number(deadline);
+      if (isNaN(num) || num <= 0) {
+        return res.status(400).json({ error: 'deadline must be a valid timestamp or null' });
+      }
+      task.deadline = num;
+    }
+  }
 
   res.json(task);
 });
 
 // DELETE /api/tasks/:id
 app.delete('/api/tasks/:id', (req, res) => {
-  const id = parseInt(req.params.id);
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) {
+    return res.status(400).json({ error: 'id must be a number' });
+  }
+
+  const initialLength = tasks.length;
   tasks = tasks.filter(t => t.id !== id);
+  if (tasks.length === initialLength) {
+    return res.status(404).json({ error: 'Task not found' });
+  }
+
   res.status(204).send();
 });
 

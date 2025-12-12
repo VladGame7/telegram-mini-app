@@ -17,42 +17,44 @@
       <button class="add-btn" onclick="showAddForm()">➕</button>
     </div>
 
-    <!-- Add Form (изначально скрыт) -->
+    <!-- Add Form -->
     <div id="addForm" class="add-form hidden">
       <input type="text" id="taskInput" placeholder="Новая задача" autofocus>
-      <div class="form-row">
-        <select id="priority">
-          <option value="low">низкий</option>
-          <option value="medium" selected>средний</option>
-          <option value="high">высокий</option>
-        </select>
-        <input type="datetime-local" id="deadline">
+      
+      <label class="priority-label">Приоритет</label>
+      <div class="priority-buttons">
+        <button type="button" class="priority-btn low" data-value="low" title="Низкий">🟢</button>
+        <button type="button" class="priority-btn medium active" data-value="medium" title="Средний">🟠</button>
+        <button type="button" class="priority-btn high" data-value="high" title="Высокий">🔴</button>
       </div>
+      
+      <input type="datetime-local" id="deadline" placeholder="Дедлайн">
+
       <div class="form-actions">
         <button class="btn-cancel" onclick="hideAddForm()">Отмена</button>
         <button class="btn-add" onclick="addTask()">Добавить</button>
       </div>
     </div>
 
-    <!-- Today Section -->
-    <div class="section">
+    <!-- Today -->
+    <div class="section" id="todaySection">
       <h2 class="section-title">Сегодня</h2>
       <div id="todayTasks" class="task-list"></div>
     </div>
 
-    <!-- Scheduled Section -->
-    <div class="section">
+    <!-- Scheduled -->
+    <div class="section" id="scheduledSection">
       <h2 class="section-title">Позже</h2>
       <div id="scheduledTasks" class="task-list"></div>
     </div>
 
-    <!-- Completed Section -->
-    <div class="section">
+    <!-- Completed -->
+    <div class="section" id="completedSection">
       <h2 class="section-title collapsible" onclick="toggleCompleted()">
         Завершённые <span id="completedCount">0</span>
         <span class="chevron">▼</span>
       </h2>
-      <div id="completedTasks" class="task-list hidden"></div>
+      <div id="completedTasks" class="task-list"></div>
     </div>
   </div>
 

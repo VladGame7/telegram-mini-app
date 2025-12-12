@@ -6,50 +6,61 @@ if (window.Telegram?.WebApp) {
   Telegram.WebApp.expand();
   Telegram.WebApp.setHeaderColor('#ffffff');
   Telegram.WebApp.setBackgroundColor('#f5f5f7');
+  Telegram.WebApp.MainButton.hide();
 }
+
+// Инициализация приоритетов
+document.addEventListener('DOMContentLoaded', () => {
+  document.querySelectorAll('.priority-btn').forEach(btn => {
+    btn.addEventListener('click', function () {
+      document.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('active'));
+      this.classList.add('active');
+    });
+  });
+});
 
 // Загрузка задач
 async function fetchTasks() {
   try {
     const res = await fetch('/api/tasks');
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     tasks = await res.json();
     renderTasks();
   } catch (e) {
-    console.error('Fetch error:', e);
+    console.error('Ошибка загрузки задач:', e);
   }
 }
 
 // Добавление задачи
 async function addTask() {
   const text = document.getElementById('taskInput').value.trim();
-  const priority = document.getElementById('priority').value;
+  const priorityBtn = document.querySelector('.priority-btn.active');
+  const priority = priorityBtn ? priorityBtn.dataset.value : 'medium';
   const deadlineRaw = document.getElementById('deadline').value;
 
   if (!text) return;
 
   const deadline = deadlineRaw ? new Date(deadlineRaw).getTime() : null;
 
-  const task = {
-    text,
-    priority,
-    deadline,
-    completed: false,
-    createdAt: Date.now()
-  };
-
   try {
     const res = await fetch('/api/tasks', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(task)
+      body: JSON.stringify({ text, priority, deadline })
     });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     await res.json();
+    
+    // Сброс формы
     hideAddForm();
     document.getElementById('taskInput').value = '';
     document.getElementById('deadline').value = '';
+    document.querySelector('.priority-btn.medium').click();
+    
     fetchTasks();
   } catch (e) {
-    alert('Ошибка при сохранении');
+    alert('Не удалось добавить задачу. Попробуйте позже.');
+    console.error(e);
   }
 }
 
@@ -59,14 +70,17 @@ async function toggleTask(id) {
   if (!task) return;
 
   try {
-    await fetch(`/api/tasks/${id}`, {
+    const res = await fetch(`/api/tasks/${id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ completed: !task.completed })
     });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    await res.json();
     fetchTasks();
   } catch (e) {
-    alert('Ошибка при обновлении');
+    alert('Не удалось обновить задачу.');
+    console.error(e);
   }
 }
 
@@ -74,67 +88,112 @@ async function toggleTask(id) {
 async function deleteTask(id) {
   if (!confirm('Удалить задачу?')) return;
   try {
-    await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+    const res = await fetch(`/api/tasks/${id}`, { method: 'DELETE' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     fetchTasks();
   } catch (e) {
-    alert('Ошибка при удалении');
+    alert('Не удалось удалить задачу.');
+    console.error(e);
   }
 }
 
-// Форматирование даты (iOS-style)
+// Обработка дат
+function parseDate(ts) {
+  if (!ts) return null;
+  const num = Number(ts);
+  return isNaN(num) ? null : new Date(num);
+}
+
 function formatDate(timestamp) {
   if (!timestamp) return '';
-  const date = new Date(timestamp);
-  const now = new Date();
+  const date = parseDate(timestamp);
+  if (!date) return '';
   
-  if (date.toDateString() === now.toDateString()) {
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const taskDate = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+
+  if (taskDate.getTime() === today.getTime()) {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   }
   return date.toLocaleDateString([], { day: 'numeric', month: 'short' });
 }
 
-// Группировка задач
-function groupTasks() {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const tomorrow = new Date(today);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-
-  return {
-    today: tasks.filter(t => 
-      !t.completed && 
-      t.deadline && 
-      new Date(t.deadline).toDateString() === today.toDateString()
-    ),
-    scheduled: tasks.filter(t => 
-      !t.completed && 
-      t.deadline && 
-      new Date(t.deadline) >= tomorrow
-    ),
-    completed: tasks.filter(t => t.completed)
-  };
+function priorityEmoji(priority) {
+  switch (priority) {
+    case 'high': return '❗';
+    case 'medium': return '⚠️';
+    case 'low': return '🕗';
+    default: return '';
+  }
 }
 
-// Отрисовка
+// Группировка задач
+function groupTasks() {
+  const now = new Date();
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const tomorrowStart = new Date(todayStart);
+  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+
+  const today = [];
+  const scheduled = [];
+  const completed = [];
+
+  tasks.forEach(task => {
+    const deadline = parseDate(task.deadline);
+    if (task.completed) {
+      completed.push(task);
+    } else if (deadline) {
+      if (deadline >= todayStart && deadline < tomorrowStart) {
+        today.push(task);
+      } else if (deadline >= tomorrowStart) {
+        scheduled.push(task);
+      } else {
+        today.push(task); // дедлайн в прошлом → сегодня
+      }
+    } else {
+      today.push(task); // без дедлайна → сегодня
+    }
+  });
+
+  return { today, scheduled, completed };
+}
+
+// Рендеринг
 function renderTasks() {
   const { today, scheduled, completed } = groupTasks();
-  
-  // Today
+
   renderTaskList('todayTasks', today);
-  // Scheduled
   renderTaskList('scheduledTasks', scheduled);
-  // Completed
   renderTaskList('completedTasks', completed);
+
   document.getElementById('completedCount').textContent = completed.length;
+
+  // Управление видимостью секций
+  document.getElementById('todaySection').style.display = today.length ? 'block' : 'none';
+  document.getElementById('scheduledSection').style.display = scheduled.length ? 'block' : 'none';
+  document.getElementById('completedSection').style.display = 'block'; // всегда показываем, даже если 0
 }
 
 function renderTaskList(containerId, tasksList) {
   const container = document.getElementById(containerId);
-  container.innerHTML = tasksList.length ? '' : `<div class="empty">Нет задач</div>`;
+  if (!container) return;
 
+  if (tasksList.length === 0) {
+    container.innerHTML = `
+      <div class="empty-state">
+        <div class="empty-icon">📝</div>
+        <p class="empty-title">Нет задач</p>
+        <p class="empty-desc">Нажмите «➕» чтобы добавить</p>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = '';
   tasksList.forEach(task => {
     const deadlineStr = task.deadline ? formatDate(task.deadline) : '';
-    const priorityClass = `priority-${task.priority}`;
+    const emoji = priorityEmoji(task.priority);
     
     const div = document.createElement('div');
     div.className = `task ${task.completed ? 'completed' : ''}`;
@@ -145,61 +204,34 @@ function renderTaskList(containerId, tasksList) {
         </div>
         <div class="task-content">
           <div class="task-text ${task.completed ? 'completed-text' : ''}">${task.text}</div>
-          ${deadlineStr ? `<div class="task-meta"><span class="${priorityClass}">●</span> ${deadlineStr}</div>` : ''}
+          ${(emoji || deadlineStr) ? `<div class="task-meta">${emoji}${deadlineStr ? ' ' + deadlineStr : ''}</div>` : ''}
         </div>
       </div>
-      <button class="delete-btn" onclick="event.stopPropagation(); deleteTask(${task.id})">✕</button>
+      <button class="delete-btn" onclick="event.stopPropagation(); deleteTask(${task.id})">×</button>
     `;
     container.appendChild(div);
   });
-
-  // Показываем/скрываем секции
-  document.querySelector('#todayTasks').closest('.section').style.display = 
-    today.length ? 'block' : 'none';
-  document.querySelector('#scheduledTasks').closest('.section').style.display = 
-    scheduled.length ? 'block' : 'none';
 }
 
 // Управление формой
 function showAddForm() {
   document.getElementById('addForm').classList.remove('hidden');
-  document.getElementById('taskInput').focus();
+  setTimeout(() => document.getElementById('taskInput').focus(), 100);
 }
+
 function hideAddForm() {
   document.getElementById('addForm').classList.add('hidden');
-}
-
-// Свайп-удаление (простой вариант)
-document.addEventListener('touchstart', handleTouchStart, false);
-document.addEventListener('touchmove', handleTouchMove, false);
-
-let xDown = null;
-
-function handleTouchStart(evt) {
-  xDown = evt.touches[0].clientX;
-}
-
-function handleTouchMove(evt) {
-  if (!xDown) return;
-  const xUp = evt.touches[0].clientX;
-  const xDiff = xDown - xUp;
-  if (Math.abs(xDiff) > 30) {
-    // Свайп влево → показать delete-btn
-    const task = evt.target.closest('.task');
-    if (task) {
-      const deleteBtn = task.querySelector('.delete-btn');
-      if (deleteBtn) deleteBtn.style.opacity = '1';
-    }
-  }
-  xDown = null;
 }
 
 // Сворачивание завершённых
 function toggleCompleted() {
   const list = document.getElementById('completedTasks');
   const chevron = document.querySelector('.chevron');
-  list.classList.toggle('hidden');
-  chevron.textContent = list.classList.contains('hidden') ? '▼' : '▲';
+  if (!list || !chevron) return;
+  
+  const isHidden = list.classList.contains('hidden');
+  list.classList.toggle('hidden', !isHidden);
+  chevron.textContent = isHidden ? '▼' : '▲';
 }
 
 // Инициализация
